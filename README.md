@@ -25,7 +25,18 @@ To run the main file with the file config_MU or config_PIE2705 in misc folder
 # Acknowledge
 Please cite the paper:
 
-Rui Shao, Xiangyuan Lan, and Pong C. Yuen. Feature constrained by pixel: Hierarchical adversarial deep domain adaptation. In ACM MM, 2018.
-
+Please kindly cite this paper in your publications if it helps your research:
+```
+@inproceedings{mm/ShaoLY18,
+  author    = {Rui Shao and
+               Xiangyuan Lan and
+               Pong C. Yuen},
+  title     = {Feature Constrained by Pixel: Hierarchical Adversarial Deep Domain
+               Adaptation},
+  booktitle = {2018 {ACM} Multimedia Conference on Multimedia Conference, {MM} 2018,
+               Seoul, Republic of Korea, October 22-26, 2018},
+  pages     = {220--228},
+  year      = {2018},
+```
 
 Contact: ruishao@comp.hkbu.edu.hk
