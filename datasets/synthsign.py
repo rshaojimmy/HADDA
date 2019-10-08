@@ -1,0 +1,185 @@
+from __future__ import print_function
+import torch.utils.data as data
+import torch
+from torchvision import datasets, transforms
+from PIL import Image
+import os
+import os.path
+import numpy as np
+# from .utils import download_url, check_integrity
+from misc import config as cfg
+from misc import utils
+from pdb import set_trace as st
+
+class SYNTHSIGN(data.Dataset):
+    """`SVHN <http://ufldl.stanford.edu/housenumbers/>`_ Dataset.
+    Note: The SVHN dataset assigns the label `10` to the digit `0`. However, in this Dataset,
+    we assign the label `0` to the digit `0` to be compatible with PyTorch loss functions which
+    expect the class labels to be in the range `[0, C-1]`
+    Args:
+        root (string): Root directory of dataset where directory
+            ``SVHN`` exists.
+        split (string): One of {'train', 'test', 'extra'}.
+            Accordingly dataset is selected. 'extra' is Extra training set.
+        transform (callable, optional): A function/transform that  takes in an PIL image
+            and returns a transformed version. E.g, ``transforms.RandomCrop``
+        target_transform (callable, optional): A function/transform that takes in the
+            target and transforms it.
+        download (bool, optional): If true, downloads the dataset from the internet and
+            puts it in root directory. If dataset is already downloaded, it is not
+            downloaded again.
+    """
+    url = ""
+    filename = ""
+    file_md5 = ""
+
+    split_list = {
+        'train': ["synthsign_train_32x32_1.mat", "synthsign_train_32x32_2.mat"],
+        'test': ["synthsign_train_32x32_1.mat", "synthsign_train_32x32_2.mat"]}        
+        # 'train': ["synthsign_train_28x28.mat"],
+        # 'test': ["synthsign_train_28x28.mat"]}
+        # 'extra': ["extra_32x32.mat"]
+
+    def __init__(self, root, split='train',
+                 transform=None, target_transform=None, download=False):
+        self.root = os.path.expanduser(root)
+        self.transform = transform
+        self.target_transform = target_transform
+        self.split = split  # training set or test set or extra set
+
+        if self.split not in self.split_list:
+            raise ValueError('Wrong split entered! Please use split="train" '
+                             'or split="extra" or split="test"')
+
+        # self.url = self.split_list[split][0]
+        # self.filename = self.split_list[split][0]
+        self.filename1 = self.split_list[split][0]
+        self.filename2 = self.split_list[split][1]
+
+
+        # if not self._check_integrity():
+        #     raise RuntimeError('Dataset not fe because this is
+        # an optional dependency for torchvision
+
+
+        # import scipy.io as sio
+
+        # # reading(loading) mat file as array
+        # loaded_mat = sio.loadmat(os.path.join(self.root, self.filename))
+
+        # self.data = loaded_mat['X']
+        # # loading from the .mat file gives an np array of type np.uint8
+        # # converting to np.int64, so that we have a LongTensor after
+        # # the conversion from the numpy array
+        # # the squeeze is needed to obtain a 1D tensor
+        # self.labels = loaded_mat['y'].aound or corrupted.' +
+        #                        ' You can use download=True to download it')
+
+        # import here rather than at top of filstype(np.int64).squeeze()
+
+        # self.data = np.transpose(self.data, (3, 2, 0, 1))        
+
+        import scipy.io as sio
+
+        # reading(loading) mat file as array
+        loaded_mat1 = sio.loadmat(os.path.join(self.root, self.filename1))
+        loaded_mat2 = sio.loadmat(os.path.join(self.root, self.filename2))
+
+        data1 = loaded_mat1['X1']
+        data2 = loaded_mat2['X2']
+
+        self.data = np.concatenate((data1,data2),axis = 3)
+
+        # loading from the .mat file gives an np array of type np.uint8
+        # converting to np.int64, so that we have a LongTensor after
+        # the conversion from the numpy array
+        # the squeeze is needed to obtain a 1D tensor
+        labels1 = loaded_mat1['y1'].astype(np.int64).squeeze()
+        labels2 = loaded_mat2['y2'].astype(np.int64).squeeze()
+
+        self.labels = np.concatenate((labels1,labels2),axis = 0)
+        self.data = np.transpose(self.data, (3, 2, 0, 1))
+        
+        # import h5py
+        # import numpy
+
+        # loaded_mat = h5py.File(os.path.join(self.root, self.filename))
+        # self.data = loaded_mat['X'][:].astype(np.uint8)
+
+        # self.labels = loaded_mat['y'][:].astype(np.int64).squeeze()
+        
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is index of the target class.
+        """
+        img, target = self.data[index], self.labels[index]
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(np.transpose(img, (1, 2, 0)))
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.data)
+
+    def _check_integrity(self):
+        root = self.root
+        md5 = self.split_list[self.split][2]
+        fpath = os.path.join(root, self.filename)
+        return check_integrity(fpath, md5)
+
+    # def download(self):
+    #     md5 = self.split_list[self.split][2]
+    #     download_url(self.url, self.root, self.filename, md5)
+
+
+def get_synthsign(train, get_dataset=False, batch_size=cfg.batch_size):
+    """Get SVHN dataset loader."""
+    #image pre-processing
+
+    convert_to_gray = transforms.Lambda(
+    lambda x: (x[0, ...] * 0.299 + x[1, ...] * 0.587 + x[2, ...] * 0.114).unsqueeze(0))    
+    pre_process = transforms.Compose([transforms.Resize(cfg.image_size),
+                                      transforms.ToTensor(),
+                                      transforms.Normalize(
+                                          mean=(0.5, 0.5, 0.5),
+                                          std=(0.5, 0.5, 0.5)),
+                                      convert_to_gray]) 
+
+    # pre_process = transforms.Compose([transforms.Resize(cfg.image_size),
+    #                                   # transforms.Grayscale(num_output_channels=1),
+    #                                   transforms.ToTensor()])
+
+
+
+    # pre_process = transforms.Compose([transforms.Resize(cfg.image_size),
+    #                                   transforms.Grayscale(num_output_channels=1),
+    #                                   transforms.ToTensor(),
+    #                                   transforms.Normalize(
+    #                                       mean=cfg.dataset_mean,
+    #                                       std=cfg.dataset_std)])
+
+    # dataset and data loader
+    synthsign_dataset = SYNTHSIGN(root=cfg.data_root,
+                                 split='train' if train else 'test',
+                                 transform=pre_process,
+                                 download=False)
+
+    if get_dataset:
+        return synthsign_dataset
+    else:
+        synthsign_data_loader = torch.utils.data.DataLoader(
+            dataset=synthsign_dataset,
+            batch_size=batch_size,
+            shuffle=True)
+        return synthsign_data_loader
